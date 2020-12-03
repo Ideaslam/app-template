@@ -1,0 +1,24 @@
+<html>
+<head> 
+<title> test </title>
+</head> 
+
+<body>
+<style >
+
+
+input[type='text'] {
+border-radius:10px; 
+width:300px;
+
+}
+
+</style >
+
+ <input type='text' id ='username' placeholder ='username' >
+ <br> 
+<input type='text' id ='password' placeholder ='password' >
+<br>
+ <input type='button' id ='submit' value ='Submit' > 
+</body>
+ </html>
