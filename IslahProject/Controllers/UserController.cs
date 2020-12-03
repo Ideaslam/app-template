@@ -294,7 +294,8 @@ namespace IslahProject.Controllers
 
                 //var respJson = await UserRepository.UserRepository.StartPhoneVerificationAsync(phoneNumber, countryCode);
                 //dynamic resp = JsonConvert.DeserializeObject<dynamic>(respJson);
-                bool status = await new UserRepository.UserRepository(lang).SendCode(phoneNumber, countryCode);
+                //  bool status = await new UserRepository.UserRepository(lang).SendCode(phoneNumber, countryCode);
+                var status = true;
 
                 if (status)
                     return new Response(true, Messages.GetMessage(lang, Messages.TypeM.DEFAULT, Messages.defaultM.PHONE_CODE_SENT));
@@ -341,6 +342,7 @@ namespace IslahProject.Controllers
                 //var respJson = await UserRepository.UserRepository.StartPhoneVerificationAsync(phoneNumber, countryCode);
                 //dynamic resp = JsonConvert.DeserializeObject<dynamic>(respJson);
                 bool status = await new UserRepository.UserRepository(lang).SendCode(phoneNumber, countryCode);
+                status = true;
 
                 if (status)
                     return new Response(true, Messages.GetMessage(lang, Messages.TypeM.DEFAULT, Messages.defaultM.PHONE_CODE_SENT));
@@ -371,9 +373,10 @@ namespace IslahProject.Controllers
                 countryCode = getCriteria.countryCode;
 
                 // Verify Code
-                var respJson = await UserRepository.UserRepository.VerifyPhoneAsync(phoneNumber, countryCode, getCriteria.code);
-                dynamic resp = JsonConvert.DeserializeObject<dynamic>(respJson);
-                bool status = Convert.ToBoolean(resp["success"]);
+                //  var respJson = await UserRepository.UserRepository.VerifyPhoneAsync(phoneNumber, countryCode, getCriteria.code);
+                //   dynamic resp = JsonConvert.DeserializeObject<dynamic>(respJson);
+                //  bool status = Convert.ToBoolean(resp["success"]);
+                var status = true;
 
                 if (status)
                 {
