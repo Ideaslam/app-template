@@ -7,8 +7,8 @@ namespace Domain.Enums
     public class Enums
     {
 
-        const string SERVER_IP  = "144.91.94.182";
-        public string APP_DIRECTORY { get; set; } = "http://" + SERVER_IP + "/islahImages/";
+        const string SERVER_IP  = "alexcarfix.ddns.net";
+        public string APP_DIRECTORY { get; set; } = "http://alexcarfix.ddns.net:8081/";
 
 
 
