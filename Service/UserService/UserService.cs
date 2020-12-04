@@ -235,8 +235,10 @@ namespace Service.UserService
                 if (correctHash == null || correctHash =="" )
                     return new Response(false, Messages.GetMessage(language , TypeM.DEFAULT,defaultM.PASS_WRONG));
 
+
+                var hashpass =PasswordHash.ValidatePassword( getCriteria.password, correctHash); 
                 // hashing Password 
-                if (PasswordHash.ValidatePassword(getCriteria.password, correctHash))
+                if (hashpass)
                 {
                     // Return Profile 
                     UserDTO user = new UserRepository.UserRepository(language).GetProfileByPhone(getCriteria.phoneNumber, lang, 2);

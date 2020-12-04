@@ -218,7 +218,7 @@ namespace Repository.ServicesRepository
 
                 service.id = Convert.ToInt32(row["ID"].ToString());
                 service.SERVICENAME_AR = row["SERVICENAME_AR"].ToString();
-                service.SERVICENAME_EN = row["SERVICENAME_EN"].ToString();
+                service.SERVICENAME_EN = row["SERVICENAME_EN"].ToString(); 
                 service.SERVICEPRICE =Convert.ToDouble( row["SERVICEPRICE"].ToString());
                 service.SERVICETIME =Convert.ToInt32( row["SERVICETIME"].ToString());
                 service.SERVICETYPE_ID =Convert.ToInt32(row["SERVICETYPE_ID"].ToString());
@@ -227,7 +227,7 @@ namespace Repository.ServicesRepository
 
                 listServices.Add(service);
             }
-            return listServices;
+            return listServices;  
         }
 
         public bool SendNotification(Notification notification)
@@ -255,8 +255,8 @@ namespace Repository.ServicesRepository
                          notification.body,
                          notification.title,
                          notification.badge,
-                         image =  "http://172.107.180.118/41.png" 
-            },
+                         image = "http://144.91.94.182/41.png"
+                    },
                 };
 
                 string postbody = JsonConvert.SerializeObject(payload).ToString();
