@@ -222,9 +222,9 @@ namespace IslahProject.Controllers
                     welcome o = new welcome();
                     o.isOldUser = isOldUser;
                     if(lang=="ar") 
-                    o.welcomeMessage = "نرحب بك في إصلاح بحلته الجديدة نرجو أن تقوم بإدخال رقم سري جديد";
+                    o.welcomeMessage = "نرحب بك في ديلx بحلته الجديدة نرجو أن تقوم بإدخال رقم سري جديد";
                         else 
-                    o.welcomeMessage = "Welcome New Islah ,Please set your new Password";
+                    o.welcomeMessage = "Welcome New Dealx ,Please set your new Password";
 
                         checkphoneResponse.innerData = o;
                     await new UserRepository.UserRepository(lang).SendCode(getCriteria.phoneNumber, getCriteria.countryCode);
@@ -267,7 +267,7 @@ namespace IslahProject.Controllers
         {
 
             byte[] imgBytes = Convert.FromBase64String(base64String);
-            string url = @"IslahImages/" + ImageType + "/" + imageName + ".png";
+            string url = @"dealxImages/" + ImageType + "/" + imageName + ".png";
             using (var imageFile = new FileStream(url, FileMode.Create))
             {
                 imageFile.Write(imgBytes, 0, imgBytes.Length);

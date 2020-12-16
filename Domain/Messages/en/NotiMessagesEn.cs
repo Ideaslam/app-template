@@ -20,7 +20,7 @@ namespace Domain.Messages
         public const string NOTI_ORDER_FINISHED = "Order was Finished";
         public const string NOTI_ORDER_DELIVERED = "Order was Delivered";
 
-        public const string NOTI_TITLE = "Islah App";
+        public const string NOTI_TITLE = "Dealx App";
 
         public const string NOTI_BODY_SUPPLIER_NOT_ACTIVE = "Your Account is in Activating phase"; 
 

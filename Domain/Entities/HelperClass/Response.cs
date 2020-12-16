@@ -69,7 +69,7 @@ namespace HelperClass
         {
             try
             {
-                string path = @"..\IslahImages\logs\errorLog.txt";
+                string path = @"..\dealxImages\logs\errorLog.txt";
                 // This text is added only once to the file.
                 if (!File.Exists(path))
                 {

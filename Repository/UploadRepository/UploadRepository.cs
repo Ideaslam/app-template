@@ -31,7 +31,7 @@ namespace Repository.UploadRepository
          public string StoreImage(string base64String, string URL_IMAGE)
         {
             byte[] imgBytes = Convert.FromBase64String(base64String);
-            string url = @"../islahImages/"+ URL_IMAGE;
+            string url = @"../dealxImages/" + URL_IMAGE;
             try
             {
                 using (var imageFile = new FileStream(url, FileMode.Create))
@@ -53,7 +53,7 @@ namespace Repository.UploadRepository
         {
             try
             {
-                string filePath = @"../IslahImages/images/" + ImageType + "/"+ imageName + ".png";
+                string filePath = @"../dealxImages/images/" + ImageType + "/"+ imageName + ".png";
                 if (System.IO.File.Exists(filePath))
                 {
                     System.IO.File.Delete(filePath);
@@ -76,7 +76,7 @@ namespace Repository.UploadRepository
         {
             try
             {
-                 string filePath = @"../IslahImages/" + uri;
+                 string filePath = @"../dealxImages/" + uri;
                
 
                 if (System.IO.File.Exists(filePath))
@@ -116,7 +116,7 @@ namespace Repository.UploadRepository
                    // var extension = ext.ToLower();
                     string path = ("videos" + @"/" + "accidents" + @"/" + accident_id + ".mp4");
 
-                    filePath = ("../islahImages/" + path);
+                    filePath = ("../dealxImages/" + path);
 
 
                     if (!AllowedFileExtensions.Contains(".mp4"))

@@ -20,7 +20,7 @@ namespace Domain.Messages
         public const string NOTI_ORDER_FINISHED = "تم تنفيذ الخدمة";
         public const string NOTI_ORDER_DELIVERED = "تم إستلام السيارة";
 
-        public const string NOTI_TITLE = "تطبيق إصلاح";
+        public const string NOTI_TITLE = "تطبيق ديلx";
 
         public const string NOTI_BODY_SUPPLIER_NOT_ACTIVE = "جاري تفعيل حسابك";
 

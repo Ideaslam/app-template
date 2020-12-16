@@ -45,7 +45,7 @@ namespace IslahProject.Controllers
                     var ext = formFile.FileName.Substring(formFile.FileName.LastIndexOf('.'));
                     var extension = ext.ToLower();
 
-                        filePath = ("../islahImages/"+fileType + @"/" + imgType + @"/" + imgName + extension);
+                        filePath = ("../dealxImages/" + fileType + @"/" + imgType + @"/" + imgName + extension);
 
 
                     if (!AllowedFileExtensions.Contains(extension))
@@ -108,7 +108,7 @@ namespace IslahProject.Controllers
                     var extension = ext.ToLower();
                     string  path = ("videos" + @"/" + "accidents" + @"/" + accident_id + extension) ; 
 
-                    filePath = ("../islahImages/" +path);
+                    filePath = ("../dealxImages/" + path);
 
 
                     if (!AllowedFileExtensions.Contains(extension))

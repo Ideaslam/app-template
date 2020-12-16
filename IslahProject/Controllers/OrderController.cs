@@ -170,7 +170,7 @@ namespace IslahProject.Controllers
 
 
                         var folderName = Path.Combine("Resources", "Images");
-                        var pathToSave = @"../IslahImages\videos\orders";//Path.Combine(Directory.GetCurrentDirectory(), folderName);
+                        var pathToSave = @"../dealxImages\videos\orders";//Path.Combine(Directory.GetCurrentDirectory(), folderName);
 
                         if (file.Length > 0)
                         {
@@ -340,7 +340,7 @@ namespace IslahProject.Controllers
             {
                 var file = Request.Form.Files["video"];
                 var folderName = Path.Combine("Resources", "Images");
-                var pathToSave = @"../IslahImages\videos\accidents";//Path.Combine(Directory.GetCurrentDirectory(), folderName);
+                var pathToSave = @"../dealxImages\videos\accidents";//Path.Combine(Directory.GetCurrentDirectory(), folderName);
 
                 if (file.Length > 0)
                 {
