@@ -27,7 +27,7 @@ namespace Repository.UploadRepository
         public UploadRepository( string language )
         {
             this.language = language;
-              log = new LoggerConfiguration().WriteTo.Console().CreateLogger();
+              log = new LoggerConfiguration().WriteTo.Console().WriteTo.File("logs\\errors.txt", rollingInterval: RollingInterval.Day).CreateLogger();
         }
 
 
@@ -53,7 +53,7 @@ namespace Repository.UploadRepository
             {
                 Console.WriteLine("not saved");
                 Console.WriteLine(ex);
-                log.Information(ex.Message); 
+                log.Error(ex.Message); 
 
 
                 url = "";
