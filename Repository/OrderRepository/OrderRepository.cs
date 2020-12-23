@@ -720,7 +720,7 @@ namespace OrderRepository
 
             return new OrderQuery(language).InsertOrderDetailAssign(order_id, order_detail_assign_id);
         }
-
+        
         public bool UpdateAccidentData(CarInfoOrder carInfoOrder)
         {
             

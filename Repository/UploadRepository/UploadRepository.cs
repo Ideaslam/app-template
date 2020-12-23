@@ -13,17 +13,21 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using static Domain.Messages.Messages;
+using Serilog;
 
 namespace Repository.UploadRepository
 {
   public  class UploadRepository : IUploadRepository
     {
 
-        string language; 
+        string language;
+        ILogger log; 
+
 
         public UploadRepository( string language )
         {
             this.language = language;
+              log = new LoggerConfiguration().WriteTo.Console().CreateLogger();
         }
 
 
@@ -34,14 +38,24 @@ namespace Repository.UploadRepository
             string url = @"../dealxImages/" + URL_IMAGE;
             try
             {
+                Console.WriteLine(base64String);
+                Console.WriteLine(url); 
                 using (var imageFile = new FileStream(url, FileMode.Create))
                 {
+                    Console.WriteLine("start save");
+                    log.Information("Start Storeing Images");
                     imageFile.Write(imgBytes, 0, imgBytes.Length);
                     imageFile.Flush();
+                    Console.WriteLine("end Save");
                 }
             }
             catch (Exception ex )
             {
+                Console.WriteLine("not saved");
+                Console.WriteLine(ex);
+                log.Information(ex.Message); 
+
+
                 url = "";
             }
           

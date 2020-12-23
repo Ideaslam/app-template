@@ -364,7 +364,7 @@ namespace OfferRepository
 
                 userOffer.firstName =   dataRow["FIRSTNAME"].ToString();
                 userOffer.lastName =   dataRow["LASTNAME"].ToString();
-                userOffer.carImage =   dataRow["CARIMAGE"].ToString();
+                userOffer.carImage = dataRow["CARIMAGE"].ToString();
                 userOffer.userImage =   dataRow["userIMAGE"].ToString();
 
                 if (language == Messages.language.ar.ToString())
