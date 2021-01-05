@@ -9,12 +9,14 @@ using Domain.Entities.Login;
 using Domain.Entities.Order;
 using Domain.Entities.Person;
 using Domain.Entities.supplier;
- 
+using Twilio;
+using Twilio.Rest.Verify.V2.Service;
 using Domain.Enums;
 using Domain.Exceptions;
 using HelperClass;
 using Login;
 using Newtonsoft.Json;
+using Domain.Common;
 
 namespace UserRepository
 {
@@ -25,24 +27,22 @@ namespace UserRepository
         string language = "en";
 
 
-        public UserRepository(string language ) {
+        public UserRepository(string language)
+        {
             this.language = language;
-                }
+        }
 
-        
+
 
 
         public async Task<bool> SendCode(string phoneNumber, string countryCode)
         {
             try
             {
-                var respJson = await StartPhoneVerificationAsync(phoneNumber, countryCode);
-                dynamic resp = JsonConvert.DeserializeObject<dynamic>(respJson);
-                bool status = Convert.ToBoolean(resp["success"]);
-                if (status)
-                    return true;
-                else
-                    return false;
+               await StartPhoneVerificationAsync(phoneNumber, countryCode);
+            
+              return true;
+                
 
             }
             catch (Exception ex)
@@ -53,11 +53,11 @@ namespace UserRepository
 
 
 
-        public  string    checkPhoneValidity(string phoneNumber )
+        public string checkPhoneValidity(string phoneNumber)
         {
             try
             {
-                if(phoneNumber == "")
+                if (phoneNumber == "")
                 {
                     return phoneNumber;
                 }
@@ -65,7 +65,7 @@ namespace UserRepository
                 if (phoneNumber.Substring(0, 1) == "0")
                     return phoneNumber.Substring(1, phoneNumber.Length - 1);
                 else
-                    return phoneNumber; 
+                    return phoneNumber;
             }
             catch (Exception ex)
             {
@@ -77,13 +77,8 @@ namespace UserRepository
         {
             try
             {
-                var respJson = await VerifyPhoneAsync(phoneNumber, countryCode , num);
-                dynamic resp = JsonConvert.DeserializeObject<dynamic>(respJson);
-                bool status = Convert.ToBoolean(resp["success"]);
-                if (status)
-                    return true;
-                else
-                    return false;
+                await VerifyPhoneAsync(phoneNumber, countryCode, num); 
+                return true; 
 
             }
             catch (Exception ex)
@@ -94,54 +89,58 @@ namespace UserRepository
 
         public static async Task<string> StartPhoneVerificationAsync(string phoneNumber, string countryCode)
         {
-            // Create client
-            var client = new HttpClient();
 
-            var requestContent = new FormUrlEncodedContent(new[] {
-                new KeyValuePair<string, string>("api_key","iC96UkA3YN4cVhg5Pq1kbg7donrT1N3P"),
-                new KeyValuePair<string, string>("vai","sms"),
-                new KeyValuePair<string, string>("phone_number",phoneNumber),
-                new KeyValuePair<string, string>("country_code",countryCode)
-        });
-
-            // https://api.authy.com/protected/$AUTHY_API_FORMAT/phones/verification/start?via=$VIA&country_code=$USER_COUNTRY&phone_number=$USER_PHONE
-
-            HttpResponseMessage response = await client.PostAsync(
-              "https://api.authy.com/protected/json/phones/verification/start?api_key=iC96UkA3YN4cVhg5Pq1kbg7donrT1N3P&via=sms&country_code=" + countryCode + "&phone_number" + phoneNumber,
-              requestContent);
-
-            // Get the response content.
-            HttpContent responseContent = response.Content;
-
-
-            // Get the stream of the content.
-            using (var reader = new System.IO.StreamReader(await responseContent.ReadAsStreamAsync()))
+            if (Env.Production)
             {
-                // Write the output.
-                return await reader.ReadToEndAsync();
+
+                string accountSid = TwilioConfig.AccountSid;
+                string authToken = TwilioConfig.AuthToken;
+                string pathServiceID = TwilioConfig.ServiceSid;
+
+                TwilioClient.Init(accountSid, authToken);
+
+                var verification = VerificationResource.Create(
+                    to: "+" + countryCode + phoneNumber,
+                    channel: "sms",
+                    pathServiceSid: pathServiceID
+                );
+
+                return "success";
             }
+            else 
+                return "success"; 
         }
 
-        public static async Task<string> VerifyPhoneAsync(string phoneNumber, string countryCode , string num)
+
+
+
+        public static async Task<string> VerifyPhoneAsync(string phoneNumber, string countryCode, string num)
         {
-            // Create client
-            var client = new HttpClient();
 
-            // Add authentication header
-            client.DefaultRequestHeaders.Add("X-Authy-API-Key", "iC96UkA3YN4cVhg5Pq1kbg7donrT1N3P");
-
-            // https://api.authy.com/protected/$AUTHY_API_FORMAT/phones/verification/check?phone_number=$USER_PHONE&country_code=$USER_COUNTRY&verification_code=$VERIFY_CODE
-            HttpResponseMessage response = await client.GetAsync(
-              "https://api.authy.com/protected/json/phones/verification/check?phone_number=" + phoneNumber.ToString() + "&country_code="+ countryCode + "&verification_code=" + num); // code Here
-
-            // Get the response content.
-            HttpContent responseContent = response.Content;
-
-            // Get the stream of the content.
-            using (var reader = new System.IO.StreamReader(await responseContent.ReadAsStreamAsync()))
+            if (Env.Production)
             {
-                // Write the output.
-                return await reader.ReadToEndAsync();
+
+
+                string accountSid = TwilioConfig.AccountSid;
+                string authToken = TwilioConfig.AuthToken;
+                string pathServiceID = TwilioConfig.ServiceSid;
+
+                TwilioClient.Init(accountSid, authToken);
+
+                var verificationCheck = VerificationCheckResource.Create(
+                   to: "+" + countryCode + phoneNumber,
+                code: num,
+                pathServiceSid: pathServiceID
+                );
+
+                if (verificationCheck.Valid == true)
+                    return verificationCheck.Status;
+                else
+                    throw new Exception(verificationCheck.Status);
+
+            }else
+            {
+                return "success";
             }
         }
 
@@ -163,7 +162,7 @@ namespace UserRepository
             UserQuery userQuery = new UserQuery(language);
             System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetUserTypeByAccessToken(accessToken));
             int UserType = 1;
-             
+
             if (dataTable.Rows.Count > 0)
             {
                 UserType = Convert.ToInt16(dataTable.Rows[0][0].ToString());
@@ -179,21 +178,21 @@ namespace UserRepository
         {
 
             UserQuery userQuery = new UserQuery(language);
-            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectsByColName("user_device", "DEVICE_ID", "user_id" , user_id.ToString()));
-           
+            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectsByColName("user_device", "DEVICE_ID", "user_id", user_id.ToString()));
+
             List<string> devices = new List<string>();
 
             if (dataTable.Rows.Count == 0)
                 throw new EmptyViewException(language);
 
-             
-                foreach(System.Data.DataRow row  in dataTable.Rows)
-                {
-                    string device = row["device_id"].ToString();
-                    devices.Add(device);
-                }
-                    
-             
+
+            foreach (System.Data.DataRow row in dataTable.Rows)
+            {
+                string device = row["device_id"].ToString();
+                devices.Add(device);
+            }
+
+
             return devices;
         }
 
@@ -212,8 +211,8 @@ namespace UserRepository
             foreach (System.Data.DataRow row in dataTable.Rows)
             {
                 OrderUser user = new OrderUser();
-                user.userId = row["user_id"] is DBNull  ?  0 : Convert.ToInt32(row["user_id"]);
-                user.OrderIdentity = row["ORDER_IDENTITY"].ToString()  ;
+                user.userId = row["user_id"] is DBNull ? 0 : Convert.ToInt32(row["user_id"]);
+                user.OrderIdentity = row["ORDER_IDENTITY"].ToString();
                 users.Add(user);
             }
 
@@ -261,7 +260,7 @@ namespace UserRepository
 
             foreach (System.Data.DataRow row in dataTable.Rows)
             {
-                int user = row["user_id"] is DBNull ? 0 : Convert.ToInt32(row["user_id"]) ;
+                int user = row["user_id"] is DBNull ? 0 : Convert.ToInt32(row["user_id"]);
                 users.Add(user);
             }
 
@@ -272,7 +271,7 @@ namespace UserRepository
         {
 
             UserQuery userQuery = new UserQuery(language);
-            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectsByColName("users","id","isAdmin","1"));
+            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectsByColName("users", "id", "isAdmin", "1"));
 
             List<int> users = new List<int>();
 
@@ -289,7 +288,7 @@ namespace UserRepository
             return users;
         }
 
-        public List<int> GetUsersIds( )
+        public List<int> GetUsersIds()
         {
 
             UserQuery userQuery = new UserQuery(language);
@@ -349,15 +348,15 @@ namespace UserRepository
         }
 
 
-        public UserDTO GetProfileByPhone (string phoneNumber ,string lang  , int userType)
+        public UserDTO GetProfileByPhone(string phoneNumber, string lang, int userType)
         {
 
             UserQuery userQuery = new UserQuery(language);
             System.Data.DataTable dataTable;
 
-            if (userType==1)
-                dataTable = conn_db.ReadTable(userQuery.GetProfileByPhoneForPerson(phoneNumber ));
-             else
+            if (userType == 1)
+                dataTable = conn_db.ReadTable(userQuery.GetProfileByPhoneForPerson(phoneNumber));
+            else
                 dataTable = conn_db.ReadTable(userQuery.GetProfileByPhoneForWorkshop(phoneNumber, lang));
 
             if (dataTable.Rows.Count == 0)
@@ -365,43 +364,43 @@ namespace UserRepository
 
             UserDTO profile = new UserDTO();
 
-                         
-                profile.user_id =  dataTable.Rows[0]["USER_ID"]   is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["USER_ID"]);
-                profile.accessToken = dataTable.Rows[0]["ACCESSTOKEN"].ToString();
-                profile.countryCode = dataTable.Rows[0]["COUNTRYCODE"] is DBNull ? 0: Convert.ToInt32(dataTable.Rows[0]["COUNTRYCODE"])    ;
-                profile.phoneNumber = dataTable.Rows[0]["PHONENUMBER"].ToString(); 
-                profile.userType    = dataTable.Rows[0]["USERTYPE"] is DBNull ? 0: Convert.ToInt32(dataTable.Rows[0]["USERTYPE"])   ;
-                profile.userImage = dataTable.Rows[0]["USERIMAGE"].ToString();
 
-                profile.rating = dataTable.Rows[0]["RATING"] is DBNull ? 0: Convert.ToDouble(dataTable.Rows[0]["RATING"])  ;
-                profile.firstName = dataTable.Rows[0]["FIRSTNAME"].ToString();
-                profile.lastName = dataTable.Rows[0]["LASTNAME"].ToString();
+            profile.user_id = dataTable.Rows[0]["USER_ID"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["USER_ID"]);
+            profile.accessToken = dataTable.Rows[0]["ACCESSTOKEN"].ToString();
+            profile.countryCode = dataTable.Rows[0]["COUNTRYCODE"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["COUNTRYCODE"]);
+            profile.phoneNumber = dataTable.Rows[0]["PHONENUMBER"].ToString();
+            profile.userType = dataTable.Rows[0]["USERTYPE"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["USERTYPE"]);
+            profile.userImage = dataTable.Rows[0]["USERIMAGE"].ToString();
+
+            profile.rating = dataTable.Rows[0]["RATING"] is DBNull ? 0 : Convert.ToDouble(dataTable.Rows[0]["RATING"]);
+            profile.firstName = dataTable.Rows[0]["FIRSTNAME"].ToString();
+            profile.lastName = dataTable.Rows[0]["LASTNAME"].ToString();
 
 
-                profile.shopNumber = dataTable.Rows[0]["STORE_NUMBER"] is DBNull ? 0: Convert.ToInt32(dataTable.Rows[0]["STORE_NUMBER"]) ;
-                profile.shopName = dataTable.Rows[0]["STORE_NAME"].ToString();
-                profile.cityId = dataTable.Rows[0]["CITYID"] is DBNull ? 0: Convert.ToInt32(dataTable.Rows[0]["CITYID"]) ;
-                profile.cityName = dataTable.Rows[0]["CITY_NAME"].ToString();
-                profile.address = dataTable.Rows[0]["ADDRESS"].ToString();
-                profile.Lat = dataTable.Rows[0]["LAT"] is DBNull ?  0: Convert.ToDouble(dataTable.Rows[0]["LAT"]) ;
-                profile.Lng = dataTable.Rows[0]["LNG"] is DBNull ?  0: Convert.ToDouble(dataTable.Rows[0]["LNG"]) ;
- 
+            profile.shopNumber = dataTable.Rows[0]["STORE_NUMBER"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["STORE_NUMBER"]);
+            profile.shopName = dataTable.Rows[0]["STORE_NAME"].ToString();
+            profile.cityId = dataTable.Rows[0]["CITYID"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["CITYID"]);
+            profile.cityName = dataTable.Rows[0]["CITY_NAME"].ToString();
+            profile.address = dataTable.Rows[0]["ADDRESS"].ToString();
+            profile.Lat = dataTable.Rows[0]["LAT"] is DBNull ? 0 : Convert.ToDouble(dataTable.Rows[0]["LAT"]);
+            profile.Lng = dataTable.Rows[0]["LNG"] is DBNull ? 0 : Convert.ToDouble(dataTable.Rows[0]["LNG"]);
+
 
 
             return profile;
         }
 
 
-        public LoginDTO LoginControl(string phoneNumber  , string password )
+        public LoginDTO LoginControl(string phoneNumber, string password)
         {
 
             UserQuery userQuery = new UserQuery(language);
             var status = false;
             System.Data.DataTable dataTable;
 
-        
-                dataTable = conn_db.ReadTable(userQuery.GetObjectByColname("users", "phoneNumber", phoneNumber));
-       
+
+            dataTable = conn_db.ReadTable(userQuery.GetObjectByColname("users", "phoneNumber", phoneNumber));
+
 
             if (dataTable.Rows.Count == 0)
                 throw new EmptyViewException(language);
@@ -413,16 +412,17 @@ namespace UserRepository
             if (PasswordHash.ValidatePassword(password, dataTable.Rows[0]["PASSWORD"].ToString()))
                 status = true;
 
-             
 
 
-        LoginDTO user = new LoginDTO {
 
-            user_id =   dataTable.Rows[0]["id"].ToString() ,
-            accessToken = dataTable.Rows[0]["accessToken"].ToString(),
-            username = dataTable.Rows[0]["username"].ToString(),
-            userType = dataTable.Rows[0]["USER_TYPE_ID"] is DBNull ? 0: Convert.ToInt32(dataTable.Rows[0]["USER_TYPE_ID"])
-        };
+            LoginDTO user = new LoginDTO
+            {
+
+                user_id = dataTable.Rows[0]["id"].ToString(),
+                accessToken = dataTable.Rows[0]["accessToken"].ToString(),
+                username = dataTable.Rows[0]["username"].ToString(),
+                userType = dataTable.Rows[0]["USER_TYPE_ID"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["USER_TYPE_ID"])
+            };
 
 
             if (status)
@@ -430,7 +430,7 @@ namespace UserRepository
             else
                 return null;
 
- 
+
         }
 
 
@@ -442,32 +442,32 @@ namespace UserRepository
 
 
 
-            if (userType == (int)Enums.UserType.person  )
+            if (userType == (int)Enums.UserType.person)
                 dataTable = conn_db.ReadTable(userQuery.GetProfileByUserIdForPerson(user_id));
             else if (userType == (int)Enums.UserType.workshop)
                 dataTable = conn_db.ReadTable(userQuery.GetProfileByUserIdForSupplier(user_id, lang));
-            
+
 
             if (dataTable.Rows.Count == 0)
                 throw new EmptyViewException(language);
 
             UserDTO profile = new UserDTO();
 
-             
-                profile.user_id = dataTable.Rows[0]["USER_ID"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["USER_ID"]);
-                profile.accessToken = dataTable.Rows[0]["ACCESSTOKEN"].ToString();
-                profile.countryCode = dataTable.Rows[0]["COUNTRYCODE"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["COUNTRYCODE"]);
-                profile.phoneNumber = dataTable.Rows[0]["PHONENUMBER"].ToString();
-                profile.userType = dataTable.Rows[0]["USERTYPE"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["USERTYPE"]);
-                profile.userImage = dataTable.Rows[0]["USERIMAGE"].ToString();
 
-                profile.rating = dataTable.Rows[0]["RATING"] is DBNull ? 0 : Convert.ToDouble(dataTable.Rows[0]["RATING"]);
-                profile.rater_no = dataTable.Rows[0]["RATER_NO"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["RATER_NO"]);
-                profile.firstName = dataTable.Rows[0]["FIRSTNAME"].ToString();
-                profile.lastName = dataTable.Rows[0]["LASTNAME"].ToString();
+            profile.user_id = dataTable.Rows[0]["USER_ID"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["USER_ID"]);
+            profile.accessToken = dataTable.Rows[0]["ACCESSTOKEN"].ToString();
+            profile.countryCode = dataTable.Rows[0]["COUNTRYCODE"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["COUNTRYCODE"]);
+            profile.phoneNumber = dataTable.Rows[0]["PHONENUMBER"].ToString();
+            profile.userType = dataTable.Rows[0]["USERTYPE"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["USERTYPE"]);
+            profile.userImage = dataTable.Rows[0]["USERIMAGE"].ToString();
+
+            profile.rating = dataTable.Rows[0]["RATING"] is DBNull ? 0 : Convert.ToDouble(dataTable.Rows[0]["RATING"]);
+            profile.rater_no = dataTable.Rows[0]["RATER_NO"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["RATER_NO"]);
+            profile.firstName = dataTable.Rows[0]["FIRSTNAME"].ToString();
+            profile.lastName = dataTable.Rows[0]["LASTNAME"].ToString();
 
 
-                profile.shopNumber = dataTable.Rows[0]["STORE_NUMBER"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["STORE_NUMBER"]);
+            profile.shopNumber = dataTable.Rows[0]["STORE_NUMBER"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["STORE_NUMBER"]);
 
             if (userType == (int)Enums.UserType.person)
                 profile.supplierType = "";
@@ -475,18 +475,18 @@ namespace UserRepository
                 profile.supplierType = dataTable.Rows[0]["suppliertype_name"] is DBNull ? "" : dataTable.Rows[0]["suppliertype_name"].ToString();
 
             profile.shopName = dataTable.Rows[0]["STORE_NAME"].ToString();
-                profile.cityId = dataTable.Rows[0]["CITYID"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["CITYID"]);
-                profile.cityName = dataTable.Rows[0]["CITY_NAME"].ToString();
-                profile.address = dataTable.Rows[0]["ADDRESS"].ToString();
-                profile.Lat = dataTable.Rows[0]["LAT"] is DBNull ? 0 : Convert.ToDouble(dataTable.Rows[0]["LAT"]);
-                profile.Lng = dataTable.Rows[0]["LNG"] is DBNull ? 0 : Convert.ToDouble(dataTable.Rows[0]["LNG"]);
-                profile.isActive = dataTable.Rows[0]["isActive"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["isActive"]);
+            profile.cityId = dataTable.Rows[0]["CITYID"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["CITYID"]);
+            profile.cityName = dataTable.Rows[0]["CITY_NAME"].ToString();
+            profile.address = dataTable.Rows[0]["ADDRESS"].ToString();
+            profile.Lat = dataTable.Rows[0]["LAT"] is DBNull ? 0 : Convert.ToDouble(dataTable.Rows[0]["LAT"]);
+            profile.Lng = dataTable.Rows[0]["LNG"] is DBNull ? 0 : Convert.ToDouble(dataTable.Rows[0]["LNG"]);
+            profile.isActive = dataTable.Rows[0]["isActive"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["isActive"]);
 
             return profile;
         }
 
 
-         
+
 
         public string GetPasswordByPhone(string phoneNumber)
         {
@@ -496,12 +496,12 @@ namespace UserRepository
             string password = "";
 
             if (dataTable.Rows.Count == 0)
-                throw new EmptyViewException(language); 
+                throw new EmptyViewException(language);
 
-           
-                password = dataTable.Rows[0][0].ToString();
-         
-                
+
+            password = dataTable.Rows[0][0].ToString();
+
+
 
             return password;
         }
@@ -515,40 +515,40 @@ namespace UserRepository
 
             if (dataTable.Rows.Count == 0)
                 throw new EmptyViewException(language);
- 
-                accessToken = dataTable.Rows[0][0].ToString();
- 
+
+            accessToken = dataTable.Rows[0][0].ToString();
+
             return accessToken;
         }
         public bool GetIsOlderFlag(string phonenumber)
         {
 
             UserQuery userQuery = new UserQuery(language);
-            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectByColname<string>("users","phonenumber", phonenumber));
+            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectByColname<string>("users", "phonenumber", phonenumber));
             int flag = 0;
 
             if (dataTable.Rows.Count == 0)
                 return false;
 
-            flag = dataTable.Rows[0]["ISOLDUSER"] is DBNull ?   0 :  Convert.ToInt32( dataTable.Rows[0]["ISOLDUSER"].ToString());
+            flag = dataTable.Rows[0]["ISOLDUSER"] is DBNull ? 0 : Convert.ToInt32(dataTable.Rows[0]["ISOLDUSER"].ToString());
 
             if (flag == 0)
                 return false;
-            else 
+            else
                 return true;
 
-           
+
         }
 
 
-        public UserDTO mappingUserObject(UserDb user, PersonDb person , WorkshopDb workshop )
+        public UserDTO mappingUserObject(UserDb user, PersonDb person, WorkshopDb workshop)
         {
 
             UserDTO userData = new UserDTO();
 
             userData.user_id = user.userId;
             userData.accessToken = user.accessToken;
-            userData.countryCode =Convert.ToInt32( user.countryCode);
+            userData.countryCode = Convert.ToInt32(user.countryCode);
             userData.phoneNumber = user.phoneNumber;
             userData.userType = user.userType;
             userData.userImage = user.userImage;
@@ -556,7 +556,7 @@ namespace UserRepository
 
             userData.firstName = person.firstName;
             userData.lastName = person.lastName;
-       
+
 
             userData.shopNumber = Convert.ToInt32(workshop.shopNumber);
             userData.shopName = workshop.shopName;
@@ -565,14 +565,14 @@ namespace UserRepository
             userData.address = workshop.address;
             userData.Lat = workshop.lat;
             userData.Lng = workshop.lng;
-           
+
 
 
             return userData;
         }
 
 
-     
+
 
         public string GetAccessTokenByPhoneNumber(string phoneNumber)
         {
@@ -584,9 +584,9 @@ namespace UserRepository
             if (dataTable.Rows.Count == 0)
                 throw new EmptyViewException(language);
 
-         
-                accessToken = dataTable.Rows[0][0].ToString();
-           
+
+            accessToken = dataTable.Rows[0][0].ToString();
+
 
             return accessToken;
         }
@@ -615,7 +615,7 @@ namespace UserRepository
         //    }
         //    else
         //        return null;
-            
+
 
         //    return userdb;
         //}
@@ -661,10 +661,10 @@ namespace UserRepository
                 throw new EmptyViewException(language);
 
 
-          
-                userdb.phoneNumber = dataTable.Rows[0]["PHONENUMBER"].ToString();
-                userdb.countryCode = dataTable.Rows[0]["countryCode"].ToString();
-        
+
+            userdb.phoneNumber = dataTable.Rows[0]["PHONENUMBER"].ToString();
+            userdb.countryCode = dataTable.Rows[0]["countryCode"].ToString();
+
 
             return userdb;
         }
@@ -681,7 +681,7 @@ namespace UserRepository
 
             userdb.phoneNumber = dataTable.Rows[0]["PHONENUMBER"].ToString();
             userdb.countryCode = dataTable.Rows[0]["countryCode"].ToString();
-          
+
 
             return userdb;
         }
@@ -696,7 +696,7 @@ namespace UserRepository
 
             userdb.phoneNumber = dataTable.Rows[0]["PHONENUMBER"].ToString();
             userdb.countryCode = dataTable.Rows[0]["countryCode"].ToString();
-          
+
 
             return userdb;
         }
@@ -737,15 +737,15 @@ namespace UserRepository
 
 
             UserQuery userQuery = new UserQuery(language);
-            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectsByColName("users", "username", "id",user_id.ToString()));
+            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectsByColName("users", "username", "id", user_id.ToString()));
             UserDb userdb = new UserDb();
 
             if (dataTable.Rows.Count == 0)
                 throw new EmptyViewException(language);
 
-            return   dataTable.Rows[0]["username"].ToString();
-            
-           
+            return dataTable.Rows[0]["username"].ToString();
+
+
 
         }
 
@@ -791,31 +791,31 @@ namespace UserRepository
             if (dataTable.Rows.Count == 0)
                 throw new EmptyViewException(language);
 
-           
-                return dataTable.Rows[0]["IMG"].ToString(); 
-     
+
+            return dataTable.Rows[0]["IMG"].ToString();
+
         }
 
         public bool InsertAccessToken(string accessToken, string username)
         {
-          
-            return new UserQuery(language).InsertAccessTokenByPhoneNumber(accessToken, username) ;
-    
+
+            return new UserQuery(language).InsertAccessTokenByPhoneNumber(accessToken, username);
+
         }
 
 
         public bool InsertAccessTokenByPhoneNumber(string accessToken, string phoneNumber)
         {
-            
-             return new UserQuery(language).InsertAccessTokenByPhoneNumber(accessToken, phoneNumber) ;
-             
+
+            return new UserQuery(language).InsertAccessTokenByPhoneNumber(accessToken, phoneNumber);
+
         }
 
         public bool InsertImageUrl(int user_id, string imageUrl)
         {
-        
-            return new UserQuery(language).InsertImageUrl(user_id, imageUrl) ;
-              
+
+            return new UserQuery(language).InsertImageUrl(user_id, imageUrl);
+
         }
 
         public string GenerateAccessToken(int length)
@@ -855,11 +855,11 @@ namespace UserRepository
 
         public bool InsertRegistrationObject(RegisterCriteria registerCriteria)
         {
-            return new UserQuery(language).InsertUserRegisterData(registerCriteria );
+            return new UserQuery(language).InsertUserRegisterData(registerCriteria);
         }
         public bool InsertPerson(PersonRegister person)
         {
-            
+
             return new UserQuery(language).InsertPerson(person);
         }
 
@@ -874,11 +874,11 @@ namespace UserRepository
             }
             catch (Exception ex)
             {
-                throw new UpdateException(language,ex.Message); 
+                throw new UpdateException(language, ex.Message);
             }
 
 
-            return true; 
+            return true;
         }
 
         public bool UpdateLastLoginPhone(string phone)
@@ -898,28 +898,28 @@ namespace UserRepository
 
             return true;
         }
-        public bool InsertSupplier(SupplierRegister  supplier)
+        public bool InsertSupplier(SupplierRegister supplier)
         {
-           
+
             return new UserQuery(language).InsertSupplier(supplier);
         }
-        
+
 
         public bool DeleteUserByPhoneNumber(string phoneNumber)
         {
-            
+
             return new UserQuery(language).DeleteUserByPhoneNumber(phoneNumber);
         }
         public bool ResetUserPhoneNumber(string phoneNumber)
         {
-            
+
             return new UserQuery(language).ResetUserPhoneNumber(phoneNumber);
         }
 
-        public bool ChangeSupplierType(int  user_id , int supplierType_id)
+        public bool ChangeSupplierType(int user_id, int supplierType_id)
         {
 
-            return new UserQuery(language).ChangeSupplierType(user_id,   supplierType_id);
+            return new UserQuery(language).ChangeSupplierType(user_id, supplierType_id);
         }
 
         public bool DeleteUserByUsername(string username)
@@ -955,7 +955,7 @@ namespace UserRepository
         public int GetSupplierIdByAccessToken(string accessToken)
         {
             UserQuery userQuery = new UserQuery(language);
-            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetSupplierIdByAccessToken( accessToken));
+            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetSupplierIdByAccessToken(accessToken));
             if (dataTable.Rows.Count > 0)
             {
                 return Convert.ToInt32(dataTable.Rows[0]["id"].ToString());
@@ -989,19 +989,19 @@ namespace UserRepository
         }
 
 
-        public int GetWorkshopIdByAccessTokenView(   string accessToken)
+        public int GetWorkshopIdByAccessTokenView(string accessToken)
         {
             UserQuery userQuery = new UserQuery(language);
             System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetWorkshopIdByAccessTokenView(accessToken));
 
             if (dataTable.Rows.Count == 0)
-                throw new EmptyViewException(language); 
+                throw new EmptyViewException(language);
 
-                return Convert.ToInt32(dataTable.Rows[0]["id"].ToString());
+            return Convert.ToInt32(dataTable.Rows[0]["id"].ToString());
         }
 
 
-        public int GetUserIdByUsername(  string username)
+        public int GetUserIdByUsername(string username)
         {
             UserQuery userQuery = new UserQuery(language);
             System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectByColname("users", "username", username));
@@ -1025,53 +1025,53 @@ namespace UserRepository
                 return -1;
         }
 
-        public bool CheckAccessToken(  string AccessToken)
+        public bool CheckAccessToken(string AccessToken)
         {
             UserQuery UserQuery = new UserQuery(language);
             System.Data.DataTable dataTable = conn_db.ReadTable(UserQuery.CheckAccessToken(AccessToken));
 
             if (dataTable.Rows.Count == 0)
                 throw new EmptyViewException(language);
-           
-                return true;
+
+            return true;
         }
 
-        public string CheckAccessTokenUser( string AccessToken)
+        public string CheckAccessTokenUser(string AccessToken)
         {
             System.Data.DataTable dataTable;
             try
             {
                 UserQuery UserQuery = new UserQuery(language);
-                 dataTable = conn_db.ReadTable(UserQuery.CheckAccessTokenUser(AccessToken));
+                dataTable = conn_db.ReadTable(UserQuery.CheckAccessTokenUser(AccessToken));
             }
-           
-            catch  
+
+            catch
             {
                 throw new EmptyViewException(language);
             }
 
             if (dataTable.Rows.Count == 0)
                 throw new EmptyViewException(language);
-            
-                return dataTable.Rows[0]["ID"].ToString();
+
+            return dataTable.Rows[0]["ID"].ToString();
         }
 
 
-        public bool UpdateUserImageUrl( string image_url, int user_id)
+        public bool UpdateUserImageUrl(string image_url, int user_id)
         {
-                return new UserQuery(language).UpdateUserImageUrl(image_url, user_id);
+            return new UserQuery(language).UpdateUserImageUrl(image_url, user_id);
         }
 
-        public bool DeleteImageByUrl(  string image_url)
+        public bool DeleteImageByUrl(string image_url)
         {
-            return new UserQuery(language).DeleteImageUrl(image_url); 
+            return new UserQuery(language).DeleteImageUrl(image_url);
         }
-        
-        public bool UpdatePasswordByPhone(  string phoneNumber, string newPassword)
+
+        public bool UpdatePasswordByPhone(string phoneNumber, string newPassword)
         {
-             
-           return new UserQuery(language).UpdatePasswordByPhone(phoneNumber, newPassword) ;
-          
+
+            return new UserQuery(language).UpdatePasswordByPhone(phoneNumber, newPassword);
+
         }
 
         //public bool UpdateUserImage(string imageName, string user_id)
@@ -1081,18 +1081,18 @@ namespace UserRepository
 
         //}
 
-        public bool UpdatePasswordByUsername(  string username, string newPassword)
+        public bool UpdatePasswordByUsername(string username, string newPassword)
         {
-          
-           return new UserQuery(language).UpdatePasswordByUsername(username, newPassword) ;
-            
+
+            return new UserQuery(language).UpdatePasswordByUsername(username, newPassword);
+
         }
-        
-        public bool UpdateProfile(UserDTO userR , int user_id)
+
+        public bool UpdateProfile(UserDTO userR, int user_id)
         {
-            
-                return new UserQuery(language).UpdateProfile(userR, user_id);
-            
+
+            return new UserQuery(language).UpdateProfile(userR, user_id);
+
         }
 
         //public bool UpdatePersonProfile(PersonDb person, int user_id)
@@ -1133,7 +1133,7 @@ namespace UserRepository
         //        person.fullname = dataTable.Rows[0]["FULLNAME"].ToString();
         //        person.IqammaNumber = Convert.ToInt32(dataTable.Rows[0]["IQAMMANUMBER"].ToString());
         //        person.rating = Convert.ToDouble(dataTable.Rows[0]["RATING"].ToString());
-                
+
         //    }
         //    else
         //        return null;
@@ -1157,7 +1157,7 @@ namespace UserRepository
         //        {workshop.expiryDate = Convert.ToDateTime(dataTable.Rows[0]["EXPIRYDATE"].ToString());}
         //        catch
         //        {workshop.expiryDate = DateTime.Now;}
-               
+
         //        workshop.shopNumber = dataTable.Rows[0]["SHOPNUMBER"].ToString();
         //        workshop.shopName = dataTable.Rows[0]["SHOPNAME"].ToString();
 
@@ -1200,7 +1200,7 @@ namespace UserRepository
         //    return workshop;
         //}
 
-        public double GetRaingByUserId(  int user_id)
+        public double GetRaingByUserId(int user_id)
         {
             UserQuery userQuery = new UserQuery(language);
             System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectByColname("rating", "user_id", user_id));
@@ -1209,14 +1209,14 @@ namespace UserRepository
             if (dataTable.Rows.Count == 0)
                 throw new EmptyViewException(language);
 
-            
-               rating = Convert.ToDouble(dataTable.Rows[0]["ID"].ToString());
-          
+
+            rating = Convert.ToDouble(dataTable.Rows[0]["ID"].ToString());
+
 
             return rating;
         }
 
-        public List<List<string>> GetUsers (GetCriteria getCriteria)
+        public List<List<string>> GetUsers(GetCriteria getCriteria)
         {
             UserQuery userQuery = new UserQuery(language);
             System.Data.DataTable dataTable;
@@ -1231,16 +1231,16 @@ namespace UserRepository
                 where += " and user_type_id =" + getCriteria.userType;
 
             if (getCriteria.lastLogin != "")
-                where += " and trunc(lastlogin) = to_date('"+ getCriteria.lastLogin + "','yyyy-mm-dd')"  ;
+                where += " and trunc(lastlogin) = to_date('" + getCriteria.lastLogin + "','yyyy-mm-dd')";
 
 
             if (getCriteria.log != 0)
                 where += " and log =" + getCriteria.log;
 
- 
-          dataTable = conn_db.ReadTable("select *  from users"+ where);
-           
-           
+
+            dataTable = conn_db.ReadTable("select *  from users" + where);
+
+
 
             List<string> userDTO;
             List<List<string>> userDTOs = new List<List<string>>();
@@ -1263,17 +1263,17 @@ namespace UserRepository
                 userDTO.Add(row["phoneNumber"].ToString());
                 userDTO.Add(row["user_type_id"].ToString());
                 userDTO.Add(row["REGISTERED_DATE"].ToString());
-                
+
 
                 userDTOs.Add(userDTO);
             }
-         
+
 
 
             return userDTOs;
         }
 
-           public object GetUsersCount(GetCriteria getCriteria)
+        public object GetUsersCount(GetCriteria getCriteria)
         {
             UserQuery userQuery = new UserQuery(language);
             System.Data.DataTable dataTable;
@@ -1288,14 +1288,14 @@ namespace UserRepository
                 where += " and user_type_id =" + getCriteria.userType;
 
             if (getCriteria.lastLogin != "")
-                where += " and trunc(lastlogin) = to_date('"+ getCriteria.lastLogin + "','yyyy-mm-dd')"  ;
+                where += " and trunc(lastlogin) = to_date('" + getCriteria.lastLogin + "','yyyy-mm-dd')";
 
 
             if (getCriteria.log != 0)
                 where += " and log =" + getCriteria.log;
 
- 
-          dataTable = conn_db.ReadTable("select count(id) from users"+ where);
+
+            dataTable = conn_db.ReadTable("select count(id) from users" + where);
 
 
 
@@ -1307,19 +1307,19 @@ namespace UserRepository
             foreach (System.Data.DataRow row in dataTable.Rows)
             {
 
-                usersCount  = Convert.ToInt32(row[0]);
-                
+                usersCount = Convert.ToInt32(row[0]);
+
             }
 
 
-        
-            return new { usersCount = usersCount } ;
+
+            return new { usersCount = usersCount };
         }
 
         public UserPage GetUserPage(int user_id)
         {
             UserQuery userQuery = new UserQuery(language);
-            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectsByColName("users_v", "URL","user_id", user_id.ToString()));
+            System.Data.DataTable dataTable = conn_db.ReadTable(userQuery.GetObjectsByColName("users_v", "URL", "user_id", user_id.ToString()));
             UserPage userPage = new UserPage();
 
             if (dataTable.Rows.Count == 0)
@@ -1339,7 +1339,7 @@ namespace UserRepository
 
 
             SupplierType type;
-            dataTable = conn_db.ReadTable(userQuery.GetMasterTranslated("suppliertype",lang));
+            dataTable = conn_db.ReadTable(userQuery.GetMasterTranslated("suppliertype", lang));
 
             List<SupplierType> workshopTypes = new List<SupplierType>();
 
@@ -1347,15 +1347,15 @@ namespace UserRepository
                 throw new EmptyViewException(language);
 
 
-            foreach(System.Data.DataRow row in dataTable.Rows)
+            foreach (System.Data.DataRow row in dataTable.Rows)
             {
                 type = new SupplierType();
                 type.id = Convert.ToInt32(row["ID"].ToString());
-                type.typeName =  row["suppliertype_name"].ToString() ;
+                type.typeName = row["suppliertype_name"].ToString();
                 workshopTypes.Add(type);
             }
 
-             
+
             return workshopTypes;
 
 
@@ -1363,15 +1363,15 @@ namespace UserRepository
 
         public bool SetRatingToUser(int RaterUser_id, int RatedUser_id, int starNo)
         {
-         
-                return new UserQuery(language).InsertRatingToUser(RaterUser_id, RatedUser_id, starNo);
-           
-     
+
+            return new UserQuery(language).InsertRatingToUser(RaterUser_id, RatedUser_id, starNo);
+
+
         }
-        public bool SetRatingByOffer(int offer_id,   int starNo)
+        public bool SetRatingByOffer(int offer_id, int starNo)
         {
 
-            return new UserQuery(language).InsertRatingByOfferId(offer_id , starNo);
+            return new UserQuery(language).InsertRatingByOfferId(offer_id, starNo);
 
 
         }
@@ -1381,26 +1381,26 @@ namespace UserRepository
             return new UserQuery(language).UpdateDeviceId(user_id, device_id, phoneType);
         }
 
-        public bool DeleteDeviceId(string user_id , string device_id)
+        public bool DeleteDeviceId(string user_id, string device_id)
         {
-            
-                return new UserQuery(language).DeleteDeviceId(user_id ,device_id);
-        
+
+            return new UserQuery(language).DeleteDeviceId(user_id, device_id);
+
         }
 
         public bool DeleteAllUserDevices(string user_id)
         {
-            
-                return new UserQuery(language).DeleteAllUserDevices(user_id);
-           
+
+            return new UserQuery(language).DeleteAllUserDevices(user_id);
+
         }
 
 
         public bool SetIsActiveTrue(string username)
         {
 
-           return new UserQuery(language).UpdateIsActive(username) ;
-          
+            return new UserQuery(language).UpdateIsActive(username);
+
         }
 
     }

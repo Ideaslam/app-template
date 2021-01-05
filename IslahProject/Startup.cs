@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Domain.Common;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Hosting;
@@ -29,6 +30,15 @@ namespace IslahProject
         readonly string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
         public void ConfigureServices(IServiceCollection services)
         {
+
+
+            var confs = Configuration.GetSection("AppConfig");
+
+            
+            Globals.TwilioConfig = confs.GetSection("Twilio").Get<TwilioConfig>();
+            Globals.Environment = confs.GetSection("env").Get<Env>();
+
+
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
             services.AddCors(options =>
